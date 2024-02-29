@@ -1,0 +1,299 @@
+---
+title: "ASSIGNMENT_3_DAR"
+author: "Mrunali Vikas Patil"
+date: "`r Sys.Date()`"
+output: word_document
+---
+#PROBLEM SET - 1 
+
+#Load the dataset
+```{r}
+data <- read.csv("college.csv")
+```
+
+#Question A)
+#Load the libraries 
+```{r}
+library(ggplot2)
+library(dplyr)
+```
+
+#Histogram for Grad.Rate
+```{r}
+ggplot(data, aes(x = Grad.Rate)) +
+  geom_histogram(binwidth = 5, fill = "red", color = "black") +
+  labs(title = "Distribution of Grad.Rate", x = "Grad.Rate", y = "Frequency") +
+  theme_minimal()
+```
+
+#The distribution of Grad.Rate appears to be slightly left-skewed, with a tail on the left side. While the distribution is not perfectly symmetric, it doesn't seem severely skewed. 
+
+#Question B)
+#Scatterplot for Grad.Rate vs each of the independent variables
+#Independent Variable - "Room.board"
+```{r}
+ggplot(data, aes(x = Room.Board, y = Grad.Rate)) +
+  geom_point(alpha = 0.5) +
+  labs(title = "Scatterplot of Grad.Rate vs Room.Board", x = "Room.Board", y = "Grad.Rate") +
+  theme_minimal()
+```
+#By looking at the Scatterplot, we can conclude that there is positive linear relations between the vairables
+
+#Independent Variable - "Expend"
+```{r}
+ggplot(data, aes(x = Expend, y = Grad.Rate)) +
+  geom_point(alpha = 0.5) +
+  labs(title = "Scatterplot of Grad.Rate vs Expend", x = "Expend", y = "Grad.Rate") +
+  theme_minimal()
+```
+
+#The Scatterplot shows no linear relationship between the Variables 
+
+# To find correlation between Grad.Rate and all other numeric variables:
+```{r}
+cor_data <- cor(data[sapply(data, is.numeric)])
+cor_data["Grad.Rate", ]
+```
+
+#By looking at the Correlation Values, Variable Grad.Rate and Outstate have the maximum correlation Value, whereas variables Book and Grad.Rate have the lowest Correlation value
+
+#Question C)
+#Boxplots to evaluate if graduation rates vary by university type (private vs public) and by status (elite vs not elite)
+# Boxplot for Grad.Rate vs Private
+```{r}
+ggplot(data, aes(x = Private, y = Grad.Rate)) +
+  geom_boxplot(fill = "yellow",color = "blue") +
+  labs(title = "Boxplot of Grad.Rate by University Type", x = "Private", y = "Grad.Rate") +
+  theme_minimal()
+```
+
+# Boxplot for Grad.Rate vs Elite
+```{r}
+data$Elite10 <- as.factor(data$Elite10)
+
+ggplot(data, aes(x = Elite10, y = Grad.Rate)) +
+  geom_boxplot(fill = "green",color = "blue") +
+  labs(title = "Boxplot of Grad.Rate by Status", x = "Elite10", y = "Grad.Rate") +
+  theme_minimal()
+```
+#By looking at the Boxplots, we can see Grad.Rate varry by status that is elite Vs non elite as we can see there is separation between two classes
+#We can also conclude that there is slight overlapping of Private University and Pubic University hence the variation of Grad.Rate is not as good as Status
+
+#Question D)
+# Remove the 'school' column and convert 'Private' to a dummy variable
+```{r}
+data_adj <- data %>%
+  select(-school) %>%
+  mutate(Private = ifelse(Private == "Yes", 1, 0))
+```
+
+#Fit a full model (with all independent variables) to predict Grad.Rate
+```{r}
+model1 <- lm(Grad.Rate ~ ., data = data_adj)
+```
+# Display the model summary
+```{r}
+summary(model1)
+```
+#Question E)
+# View the first few rows of the adjusted data
+```{r}
+head(data_adj)
+```
+
+#Vif Statistics
+# Load necessary library
+```{r}
+library(car)
+```
+# Compute VIF
+```{r}
+vif(model1)
+```
+#As all the variables have VIF value less than 10 hence there is no multi-collinearity in any of the variable. 
+
+#Question F)
+#Applying two Varable Selection Procedures
+# Backward selection
+```{r}
+backward_model <- step(model1, direction = "backward")
+forward_model <- step(model1, direction = "forward")
+```
+# Display the summary for both models
+
+```{r}
+summary(backward_model)
+summary(forward_model)
+```
+#Adjusted R-squared for backward Model:  0.4351 
+# Adjusted R-squared for forward Model :  0.4346 
+#hence we can conclude that Backward model performed better as it has more significant Variables
+
+#Question G)
+# We will choose Backward model as it has more significant Variables and the adjusted Rsquared is grater than the forward model.  
+```{r}
+summary(backward_model) 
+```
+#Using the provided coefficients, the equation becomes:
+
+Grad.Rate=51.40+4.62(Private)−18.11(Accept.pct)+4.017(Elite101)+0.0006809(F.Undergrad)−0.001956(P.Undergrad)+0.001235(Outstate)+0.001667(Room.Board)−0.002524(Books)−0.001718(Personal)+0.1306(PhD)−0.07284(Terminal)+0.001003(S.F.Ratio)+0.3092(perc.alumni)−0.0004365(Expend)
+Grad.Rate=51.40+4.62(Private)−18.11(Accept.pct)+4.017(Elite101)+0.0006809(F.Undergrad)−0.001956(P.Undergrad)+0.001235(Outstate)+0.001667(Room.Board)−0.002524(Books)−0.001718(Personal)+0.1306(PhD)−0.07284(Terminal)+0.001003(S.F.Ratio)+0.3092(perc.alumni)−0.0004365(Expend)
+
+#Fit a final regression model M1
+```{r}
+final_model <- lm(Grad.Rate ~Private + Accept.pct + Elite10 + F.Undergrad + 
+                    P.Undergrad + Outstate + Room.Board + Personal + PhD + perc.alumni + 
+                    Expend , data=data_adj)
+summary(final_model)
+```
+#Question H)
+#Scatter plot of the studentized residuals against the predicted values
+```{r}
+studentized_residuals <- rstudent(final_model)
+predicted_values <- fitted(final_model)
+
+ggplot(data.frame(studentized_residuals, predicted_values), aes(x = predicted_values, y = studentized_residuals)) +
+  geom_point(alpha = 0.5) +
+  labs(title = "Studentized residuals vs. Predicted values", x = "Predicted values", y = "Studentized residuals") +
+  theme_minimal()
+```
+#The residuals appear reasonably random, where vairation first increased and then decreased hence we can see there is no constant Variation
+
+#Question I)
+#Analyze normal probability plot of residuals
+# i) Analyze normal probability plot of residuals
+```{r}
+qqnorm(residuals(final_model), col = "blue")
+qqline(residuals(final_model), col= "red")
+```
+# Upon examining the normal probability plot, we can observe that several spots deviate from the line. As a result, the model fits poorly.
+
+#Question J) 
+#Check for outliers or influential points
+```{r}
+plot(hatvalues(final_model), main="Hat Values", col = "green")
+plot(cooks.distance(final_model), main="Cook's Distance",col = "red")
+```
+# Find indices of influential points with Cook's distance > 1
+```{r}
+
+influenceIndexPlot(final_model)
+```
+# Positions in which outliers or influential points present are 70, 96, 285, 378, 641.
+
+#Question K) 
+#Analyze the R2 value for the final model
+```{r}
+summary(final_model)$r.squared
+```
+#Adjusted R-squared:  0.4351 
+#F-statistic: 55.33
+#p-value: < 2.2e-16
+#R-squared:  0.4431 - suggest that it accounts for around 44.31% of the difference in university graduation rates.
+# For forecasting graduation rates, the model has a modest level of explanatory power.
+
+#Question L)
+
+Larger absolute coefficients and statistically significant (p-values) predictors may be regarded as more influential.
+Top 4 Significant predictors include perc.alumni, Outstate, P.Undergrad and Accept.pct.
+
+Comparing Graduation Rates at Private and Public Universities:
+  The coefficient for Private is positive (4.770) and statistically significant, meaning that private institutions typically have graduation rates that are 4.7 percentage points higher than those of public universities.
+
+University Graduation Rates for "Elite" Universities:
+  Elite10 has a positive (4.022) and statistically significant coefficient. This indicates that, in comparison to non-elite institutions, "elite" universities have graduation rates that are, on average, 4.02 percentage points higher.
+
+#PROBLEM SET 2 
+
+#Question A)
+# Load necessary libraries
+```{r}
+library(tidyverse)
+```
+# Fit the regression model
+```{r}
+interaction_model <- lm(Grad.Rate ~ Elite10 + Accept.pct + Outstate + perc.alumni + Expend + 
+              Elite10:Accept.pct + Elite10:Outstate + Elite10:perc.alumni + Elite10:Expend, data=data)
+```
+# Display the summary of the model to check the significance of interaction terms
+```{r}
+summary(interaction_model)
+```
+# we will remove variable Elite10:perc.alumni as it is not significant.
+
+#Question B)
+
+# Simplified model, removing non-significant interaction terms
+```{r}
+model_simplified <- lm(Grad.Rate ~ Elite10 + Accept.pct + Outstate + perc.alumni + Expend + 
+                         Elite10:Accept.pct+Elite10:Outstate + Elite10:Expend, data=data)
+```
+# Display the summary of the simplified model
+```{r}
+summary(model_simplified)
+```
+# Grad.Rate=53.14+35.85×Elite10−15.05×Accept.pct+0.002322×Outstate+0.3334×perc.alumni−0.0009506×Expend−21.64×Elite10×Accept.pct−0.002253×Elite10×Outstate+0.001057×Elite10×Expend
+
+#Question C)
+# Extract coefficients from the simplified model
+```{r}
+coefficients(model_simplified)
+```
+# The coefficient for Elite10 is 35.85. This means, all else being constant, being an "Elite10" university is associated with an increase of 35.85 units in graduation rate compared to a non-Elite10 university.
+# The coefficient for the interaction term Elite10:Accept.pct is -21.64. This means that the relationship between Accept.pct and Grad.Rate is moderated by whether the university is an Elite10. For Elite10 universities, a unit increase in Accept.pct is associated with a decrease in Grad.Rate of (15.05 - 21.64) = -36.69 units, whereas for non-Elite10 universities, the decrease is 15.05 units. This shows that the negative effect of Accept.pct on Grad.Rate is stronger for Elite10 universities.
+# The coefficient for Elite10:Outstate is -0.002253. While a unit increase in Outstate is associated with an increase of 0.002322 units in Grad.Rate for non-Elite10 universities, this effect is reduced by 0.002253 units for Elite10 universities, resulting in an almost negligible increase of 0.000069 units. Thus, being an Elite10 university dampens the positive effect of Outstate on Grad.Rate.
+# There is no interaction term between Elite10 and perc.alumni in the model. This means that the effect of perc.alumni on Grad.Rate is the same regardless of whether a university is an Elite10 or not. The effect is an increase of 0.3334 units in Grad.Rate for every unit increase in perc.alumni.
+# The coefficient for Elite10:Expend is 0.001057. This suggests that for Elite10 universities, a unit increase in Expend increases the Grad.Rate by (0.001057 - 0.0009506) = 0.0001064 units more than non-Elite10 universities. In other words, the negative effect of Expend on Grad.Rate is slightly mitigated for Elite10 universities.
+# The association between Grad.Rate and the predictors is impacted differently by being a "Elite10" university. It reduces the good impact of Outstate, increases the bad impact of Accept.pct, and somewhat lessens the negative impact of Expend. Regardless of whether the university is ranked in the Elite10, perc.alumni has the same impact.
+
+#Question D)
+# Load required library
+```{r}
+library(caret)
+```
+# Split the data into training and testing sets (70-30 split)
+```{r}
+set.seed(123)
+splitIndex <- createDataPartition(data$Grad.Rate, p=0.7, list=FALSE)
+train_data <- data[splitIndex, ]
+test_data <- data[-splitIndex, ]
+```
+# Fit the simplified model on training data
+```{r}
+model_train <- lm(Grad.Rate ~ Elite10 + Accept.pct + Outstate + perc.alumni + Expend + 
+                    Elite10:Outstate + Elite10:Expend, data=train_data)
+```
+# Predict on test data
+```{r}
+predictions <- predict(model_train, newdata=test_data)
+```
+# Compute the MAPE statistic
+```{r}
+MAPE <- mean(abs((predictions - test_data$Grad.Rate) / test_data$Grad.Rate))
+
+MAPE
+```
+#Question E)
+```{r}
+set.seed(345)
+```
+# Define the control parameters for cross-validation
+```{r}
+library(Metrics)
+ctrl <- trainControl(method = "cv", number = 5)
+
+ModelM2_CV <- train(Grad.Rate ~ Elite10+ Accept.pct+ Outstate+ perc.alumni + Expend + Elite10 * Accept.pct + Elite10 * Outstate + Elite10 * Expend, 
+                                data = data,method = "lm", trControl = ctrl)
+
+summary(ModelM2_CV)
+
+predictions_M2 <- predict(ModelM2_CV, newdata = data)
+
+mape_M2 <- mape(data$Grad.Rate, predictions_M2)
+cat("MAPE for Model M2:", mape_M2, "\n")
+
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```

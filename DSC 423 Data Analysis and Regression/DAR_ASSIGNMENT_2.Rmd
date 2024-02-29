@@ -1,0 +1,241 @@
+---
+title: "DAR_Assignment_2"
+author: "Mrunali Vikas Patil"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+#PROBLEM SET 1
+
+#Importing data in R
+```{r}
+data=read.table("Bankingfull.txt",header = TRUE)
+dim(data)
+head(data)
+```
+
+#Question A) Scatterplots
+```{r}
+pairs(~Balance + Age + Education + Income + HomeVal + Wealth, data=data, main="Scatterplot Matrix")
+```
+# The scatterplot matrix indicates that the variables wealth and income have a significant positive linear relationship with balance. Additionally, we cannot detect any outliers in those two variables.
+# Variable HomeVal and Balance have a solid linear relationship.
+# Although not as strongly as other variables, age and education also exhibit a linear relationship with balance. These two variables also contain outliers.
+# There is a strong or weak linear relationship between all variables.
+
+#Question B) Correlations
+```{r}
+cor(data$Balance, data$Age)
+cor(data$Balance, data$Education)
+cor(data$Balance, data$Income)
+cor(data$Balance, data$HomeVal)
+cor(data$Balance, data$Wealth)
+```
+# The correlation matrix reveals a high positive correlation between the variables Wealth and Income and the target variable Balance.
+# The dependent variable Balance and the independent variables Age, Education, and HomeVal show a moderately positive connection.
+# There is a weak correlation between Variable Age and Education.
+
+#Question C) Regression Model M1
+#Fit the Regression Model
+```{r}
+Model_M1 <- lm(Balance ~ Age + Education + Income + HomeVal + Wealth, data=data)
+summary(Model_M1)
+```
+# Load necessary library for VIF computation
+```{r}
+library(car)
+```
+#Compute VIF Statistics
+```{r}
+vif<- vif(Model_M1)
+```
+#VIF Value above 10 indicates high multicollinearity.
+# We examined the VIF statistics for the model M1 and discovered that the VIF factors for Variable Income and Wealth were greater than 10.
+#Thus, we can draw the conclusion that the variables Income and Wealth have a multi-collinearity issue.
+
+#Question D) Improved Regression Model M2
+
+#1]
+#The variable Income will be removed from the model first because it has the greatest VIF value.
+# We will also remove the variable HomeVal because it has a higher P value.
+```{r}
+Model_M2 <- lm(Balance ~ Age + Education + Wealth, data=data)
+summary(Model_M2)
+```
+#Compute VIF Statistics
+```{r}
+vif<- vif(Model_M2)
+```
+
+# R-squared and adjusted R-squared
+```{r}
+summary(Model_M1)$adj.r.squared
+summary(Model_M2)$adj.r.squared
+```
+#we can determine that adjusted R-Squared for the Model_M1 has higher values than Model_M2 after reffiting the Model.
+
+#2]Residual Analysis
+```{r}
+par(mfrow=c(2,2))
+```
+#Standardized Residuals Vs Predicted Values
+```{r}
+plot(fitted(Model_M1), rstandard(Model_M1), main="STANDARDIZED RESIDUAL Vs PREDICTED VALUES ", xlab="Fitted values", ylab="Standardized Residuals")
+abline(h=0, col="red")
+```
+# The plot indicates that the residuals show less variation, thus we can conclude that the model is good. Additionally, there are 2 to 3 outlier points.
+
+
+# Normal plot of residuals
+```{r}
+qqPlot(rstandard(Model_M1))
+```
+
+#3]Finding Outliers and Influential Points 
+```{r}
+outliers <- which(abs(rstandard(Model_M1)) > 3)
+print(outliers)
+```
+#We can see there are less number of outliers also we are not able to see only one influential point in the fitted Model.
+```{r}
+influential_points <- which(cooks.distance(Model_M1) > 1)
+print(influential_points)
+```
+#Graph for the Influence Point
+```{r}
+influenceIndexPlot(Model_M1)      
+```
+#4]Standardized Coefficients
+```{r}
+library(dplyr)
+library(QuantPsyc) 
+lm.beta(Model_M1)
+```
+#The standardized coefficients show that the variable "Wealth" has the greatest impact on the target variable "Balance."
+
+#Question E)Prediction
+# New data for prediction
+```{r}
+new_data <- data.frame(Age = 34, Education = 13, Income = 64000, HomeVal = 140000, Wealth = 160000)
+predicted_balance <- predict(Model_M1, newdata=new_data, interval="confidence", level=0.95)
+print(predicted_balance)
+```
+#Predicted average bank balance = 30751.53 
+#Lower 95% Confidence Interval = 29952.27 
+#Upper 95% Confidence Interval = 31550.78 
+
+# Problem Set 2
+# Importing data in R
+```{r}
+pgatour=read.csv("pgatour2006_small.csv",header = TRUE)
+dim(pgatour)
+head(pgatour)
+```
+# Remove the variable "Name" as it has unique values.
+```{r}
+pgatour <- pgatour[, !names(data) %in% "Name"]
+```
+#Question 1)Scatterplots of PrizeMoney vs. other variables
+```{r}
+pairs(~PrizeMoney+DrivingAccuracy+GIR+PuttingAverage+BirdieConversion+PuttsPerRound,data = pgatour,main = "Scatterplot Matrix")
+```
+#We cannot find a linear relationship between the target variable "PrizeMoney" and the other variables from the scatterplot.
+
+#Question 2)Histogram of PrizeMoney 
+```{r}
+par(mfrow=c(1,1))
+hist(pgatour$PrizeMoney, main="Histogram of PrizeMoney", xlab="PrizeMoney", breaks=50, col = "red", border = "black")
+```
+#The histogram of PrizeMoney shows a right-skewed distribution 
+#This indicates that while the majority of players receive lesser prize amounts, a small number of players receive much greater amounts, resulting to the long tail on the right side of the distribution.
+
+#Question 3)Applying  log transformation 
+```{r}
+pgatour$ln_Prize <- log(pgatour$PrizeMoney)
+hist(pgatour$ln_Prize, main="Histogram of ln(PrizeMoney)", xlab="ln(PrizeMoney)", breaks=50, col = "blue", border = "black")
+```
+#The histogram of ln ( PrizeMoney ) looks to be more symmetric after log transformation of variable "PrizeMoney".
+#The distribution is now more bell-shaped, which is closer to a normal distribution, even though there is still a tiny right skew.
+
+#Question 4)
+# Fit the regression model to predict ln(PrizeMoney) and evaluating the significance of each predictor 
+```{r}
+Model1 <- lm(ln_Prize ~ DrivingAccuracy + GIR + BirdieConversion + PuttingAverage + PuttsPerRound, data=pgatour)
+```
+#1]
+```{r}
+summary(Model1)
+```
+#By Looking at the summary, The adjusted R-Squared is 0.5293
+#DrivingAccuracy has a high p-value of 0.948, showing that it is not a significant predictor
+#Hence we will remove the DrivingAccuracy and then refit the model
+```{r}
+Model2 <- lm(ln_Prize ~ GIR+PuttingAverage+BirdieConversion+PuttsPerRound, data=pgatour)
+summary(Model2)
+```
+#PuttingAverage has a p-value of 0.0962, indicating that it might not be a strong predictor
+#Hence we will remove the PuttingAverage and then refit the model.
+```{r}
+Model3 <- lm(ln_Prize ~ GIR+BirdieConversion+PuttsPerRound, data=pgatour)
+summary(Model3)
+```
+# After Refiting the model, all variables now appear to be significant. 
+# AdjustedR-squared : 0.5274 
+
+#2] Residual plots
+```{r}
+par(mfrow=c(2,2))
+plot(Model3)
+```
+# By examining the Residuals vs Fitted plot, we can conclude that the model appears to be valid because variation is considerably lower and there are fewer outliers.
+# The Q-Q plot shows that there are several spots that follow the line.
+
+#3]Outliers and Influential points
+```{r}
+residuals_standardize <- rstandard(Model3)
+outliers_position <- which(residuals_standardize > 3)
+```
+# Outliers
+```{r}
+residuals_standardize[outliers_position]
+```
+# We can call these points as outliers because these points are located 3 standard deviations away from the mean.
+
+#Question 5)
+```{r}
+coefficients <- coef(Model3)
+coefficients
+```
+#For every 1% rise in GIR, the coefficient for GIR indicates the change in PrizeMoney.
+#Keeping all other variables constant, we expect an average rise in PrizeMoney of exp(0.2454205) times.
+
+#Question 6)Prediction
+```{r}
+new_data <- data.frame(DrivingAccuracy = 64, GIR = 67, BirdieConversion = 28, PuttingAverage = 1.77, PuttsPerRound = 29.16)
+```
+#Predictions alongside with the 95% Prediction Interval
+```{r}
+prediction <- predict(Model3, newdata = new_data, interval = "prediction", level = 0.95)
+print(prediction)
+```
+
+```{r}
+Predicted_Balance <- exp(10.74555)
+lower_Limit <- exp(9.407982)
+upper_limit <- exp(12.08312)
+```
+
+```{r}
+print(Predicted_Balance)
+print(lower_Limit)
+print(upper_limit)
+```
+
+
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+

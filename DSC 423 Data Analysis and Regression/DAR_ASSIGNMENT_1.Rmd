@@ -1,0 +1,238 @@
+---
+Title: Assignment_1
+Author: Mrunali Vikas Patil
+Date: "2023-09-26"
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+getwd()
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+#PROBLEM SET 1
+```{r}
+library(pandoc)
+BankingData = read.table("Banking.txt", header = T)
+print(BankingData)
+```
+#Question A)
+```{r}
+library(psych)
+hist(BankingData$Balance,main= "Histogram of Balance",xlab = "Balance",col = "pink",border = "black")
+
+summary(BankingData$Balance)
+describe(BankingData$Balance)
+```
+#The histogram of average account balance appears to be slightly right-skewed 
+#Mean of the data is 24888 which is slightly higher than the median of the data which is 24660 as these values are almost similar we can say that the data is slightly normally distributed
+
+#Question B)
+```{r}
+pairs(~Balance+Age+Education+Income,data = BankingData, main="Scatterplot Matrix")
+```
+#There is a significantly stronger positive linear relationship observed in the scatterplot of income and balance. 
+#There is not a clear linear relationship observed in the Education vs. Balance scatterplot.
+#A rather weak  linear relationship between age and balance is visible in the scatterplot.
+#There appear to be a few outliers in the scatterplots between education and balance.
+
+#Question C)
+```{r}
+cor(BankingData)
+```
+#The correlation between Income and Balance is positive and moderate, indicating Strong Corelation.
+#The correlation between Education and Balance as well as with age and balance is low, suggesting a weak association.
+
+#Question D)
+#Balance is dependent variable while the Age, Education and Income are Independent Variable.
+
+#Question E)
+```{r}
+Rfit <- lm(Balance~Age+Education+Income,data = BankingData)
+summary(Rfit)
+```
+#Income has the most significant effect on balance as the pvalue for this coefficient in the summary output is <2e-16 ***
+
+#Question F)
+#As per the summary pvalue for the education is greatest, we remove this predictor and refit the new regression model. 
+```{r}
+Rfit2 <- lm(Balance~Age+Income,data = BankingData)
+summary(Rfit2)
+```
+#The fitted regression model without Education is:
+#Balance = B0 + B1*AGE + B2*INCOME
+#Balance = -5.912e+03 + 3.227e+02*AGE + 3.966e-01*INCOME
+
+#Question G)
+# B0 = -5.912e+03 (Y Intercept)
+# B1 = 3.227e (Represents the Age)
+# B2 = 3.966e-01 (Represents the Income)
+
+#Question H)
+# R-squared
+```{r}
+summary(Rfit2)$r.squared
+```
+#R Squared for the model is 0.9218 which is higher. A higher R2 indicates that more of the variance in the dependent variable has been determined by the model.
+
+#Question I)
+```{r}
+predicted_balance <- predict(Rfit2, newdata = data.frame(Age = 34.8, Education = 12.5, Income = 42401))
+predicted_balance
+```
+#The model prediction error is the difference between the predicted value and the observed value 
+```{r}
+predicted_balance <-22135.22
+observed_balance <-21572
+
+Error <-predicted_balance - observed_balance 
+print(Error)
+
+Error <-563.22
+```
+#Question J)
+# Global F-test for model adequacy
+```{r}
+anova(Rfit2)
+```
+
+# H0 = Independent variables are not significant
+# Ha = Independent variables are significant
+# As observed, P value for both the variables is less than 0.05 hence both the variables are important. 
+
+#PROBLEM SET 2
+
+#Question 1 :
+# Numsex is 1 if sex is Male, Numsex is 0 if sex is Female.
+# College_Business = 1 if College = Business. College_Business = 0 if College not = Business
+
+#Question 2 : 
+# y = B0 + numsex*B1 + College_Business*B2 
+
+#Question 3 :
+# That means that the category business and engineering have the same effect on salary, so we can use one variable for both categories.
+# y =B0 + numsex*B1 + college_Business_Engineering*B2 + college_Nursing*B2 + college_liberal_Arts*B4
+
+# PROBLEM SET 3
+
+```{r}
+SalaryData = read.table("salary_IS.txt", header = T)
+print(SalaryData)
+```
+#Question 1 :
+```{r}
+pairs(~salary+numempl+margin+ipcost,data = SalaryData, main="Scatterplot Matrix")
+cor(SalaryData)
+```
+#Salary is not linearly related to the three predictors
+
+#Margin and Ipcost are more strongly related in comparison with others.
+
+#Question 2 :
+```{r}
+Fit1 <- lm(salary~numempl+margin+ipcost,data = SalaryData)
+summary(Fit1)
+```
+
+#Question 3 :
+```{r}
+summary(Fit1)
+```
+#The variable ipcost has most significant effect on salary as it has less p value for the t-test.
+
+#Question 4 :
+#We can see from the model's prior report that the numempl influence is less important as it has greater p-value. Particular variable is therefore not included in the refit model. 
+```{r}
+Fit2 <- lm(salary~ipcost+margin,data = SalaryData)
+summary(Fit2)
+```
+
+#The slope coefficient for "ipcost" is 0.20311, and the slope coefficient for "margin" is 0.09091.
+
+#Question 5 :
+```{r}
+r_squared <- summary(Fit2)$r.squared
+print(r_squared)
+```
+#Adjusted R squared for the first model with all 3 independent variables is 0.3087, while for the second fit model is 0.3188. As R Squared value for the second model is greater than the first model we can say that second model performed better.
+
+#Question 6 :
+```{r}
+Anova <- anova(Fit2)
+print(Anova)
+```
+
+#H0 : The vairables does not have relation with salary 
+#Ha : The variables have relation with salary 
+
+#As per summary of Anova test we can see that pvalue for both attributes is less than significance level hence both variables are important.
+
+#Question 7 :
+```{r}
+library(dplyr)
+library(QuantPsyc)
+lm.beta(Fit2)
+```
+
+#The variable "ipcost" has a major effect on salary, as determined by the second refit model's standardized coefficients.
+
+# PROBLEM SET 4
+
+H0 is mean heart rate = 71 beats/minute
+H1 is mean heart rate > 71 beats/minute
+
+significance level (α) = 0.05
+
+sample mean (X) is 73.5 beats/minute
+sample standard deviation (s) = 6 beats/minute
+sample size (n) = 90
+population mean (μ) = 71
+ 
+t = X-μ/(s/√n)
+
+t = 73.5-71/(6/√90)
+
+t = 3.95
+
+Degrees of freedom (df) = n - 1 = 90 - 1 = 89
+
+The critical t-value for a one-tailed test at α = 0.05 with df = 89 is approximately 1.6622
+
+Since the calculated t-value (3.95) is greater than the critical t-value (1.6622), we reject the null hypothesis (H0).
+
+The t-test results provide sufficient evidence to conclude that, at the 0.05 level of significance, the true mean heart rate during laughter exceeds 71 beats per minute.
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+Rfit <- lm(Balance~Age+Education+Income,data = BankingData)
+summary(Rfit)

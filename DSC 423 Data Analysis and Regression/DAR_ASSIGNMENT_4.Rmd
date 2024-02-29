@@ -1,0 +1,284 @@
+---
+title: "DAR_ASSIGNMENT_4"
+author: "Mrunali Vikas Patil"
+date: "`r Sys.Date()`"
+output: word_document
+---
+# Problem 1:
+# Load the data
+```{r}
+data = read.csv("churn_train.csv", header = T)
+dim(data)
+head(data)
+```
+
+#QUESTION 1)
+# Load the basic Libraries 
+```{r}
+library(ggplot2)
+```
+
+# Boxplot for AGE 
+```{r}
+ggplot(data, aes(x = factor(CHURN), y = AGE)) + 
+  geom_boxplot() +
+  xlab("Churn") +
+  ylab("Age") +
+  ggtitle("Boxplot of Age by Churn Status")
+```
+
+#The boxplot indicates that the loan will not be granted if the age value is between 31 and 52. In accordance with it, there is a chance that a loan will be accepted if the applicant is between the ages of 22 and 27. In the age range of 32 to 52, there are also some anomalies in terms of loan approvals.
+
+# Create boxplot for PCT_CHNG_BILL_AMT 
+```{r}
+ggplot(data, aes(x = factor(CHURN), y = PCT_CHNG_BILL_AMT)) + 
+  geom_boxplot() +
+  xlab("Churn") +
+  ylab("Percent Change in Bill Amount") +
+  ggtitle("Boxplot of Percent Change in Bill Amount by Churn Status")
+```
+
+#Comparing the median, spread, and any possible outliers between the groups for both AGE and PCT_CHNG_BILL_AMT that are specified by the CHURN variable is the analysis that would be done on these boxplots.  
+#Bill modifications won't have an impact on the churn value because the two boxplots above can't be separated from one another.
+
+#QUESTION 2)
+# Fitting logistic regression model
+```{r}
+churn_model <- glm(CHURN ~ ., data = data, family = "binomial")
+```
+
+# Summary of the model to check for significance
+```{r}
+summary(churn_model)
+```
+
+# Remove non-significant variables
+```{r}
+coefficients_table <- summary(churn_model)$coefficients
+```
+
+# Filter variables with p-value > 0.05 
+```{r}
+non_significant_variable <- coefficients_table[coefficients_table[, 4] > 0.05, ]
+```
+
+# Arrange in descending order based on p-values
+```{r}
+non_significant_variable <- non_significant_variable[order(-non_significant_variable[, 4]), ]
+```
+
+# Display the result
+```{r}
+non_significant_variable
+```
+
+# Refit Model
+```{r}
+Rfit_model <- glm(formula = CHURN ~ TOT_ACTV_SRV_CNT + AGE + PCT_CHNG_IB_SMS_CNT + 
+                     PCT_CHNG_BILL_AMT + COMPLAINT, family = "binomial", data = data)
+summary(Rfit_model)
+```
+
+# Expression for the fitted model is as follows
+#logit(p)=7.11401−0.54892×TOT_ACTV_SRV_CNT−0.17781×AGE−0.41230×PCT_CHNG_IB_SMS_CNT−0.39914×PCT_CHNG_BILL_AMT+0.50489×COMPLAINT
+
+# QUESTION 3)
+# Plotting residuals
+```{r}
+residuals <- resid(churn_model)
+plot(predict(churn_model), residuals, xlab = "Fitted values", ylab = "Residuals", main = "Residual Plot")
+```
+
+# Calculate and interpret odds ratios
+
+odds_ratios <- exp(coef(churn_model))
+print(odds_ratios)
+
+Intercept = 7.11401
+Odds Ratio = exp(7.11401) = 1230.83
+
+#The probability of churn is around 1231 times greater than the probability of not churning when all other variables are zero.
+
+#TOT_ACTV_SRV_CNT: 
+#For each additional active service count, the odds of churn decrease by a factor of exp(-0.54892). Since the coefficient is negative, the odds ratio will be less than 1, indicating a negative relationship with churn.
+
+#AGE: 
+#For each additional year of customer age, the odds of churn decrease by a factor of exp(-0.17781). Older customers are less likely to churn, as indicated by the negative coefficient.
+
+#PCT_CHNG_IB_SMS_CNT: 
+#For each percentage point increase in the change of incoming SMS count, the odds of churn decrease by a factor of exp(-0.41230). A negative relationship is indicated here as well.
+
+#PCT_CHNG_BILL_AMT: 
+#For each percentage point increase in the change of bill amount, the odds of churn decrease by a factor of exp(-0.39914), although this predictor is not significant at the alpha = 0.05 level (p-value = 0.0704), so this effect is less certain.
+
+#COMPLAINT:
+#If there was at least one complaint, the odds of churn increase by a factor of exp(0.50489). The positive coefficient indicates a positive relationship with churn.
+
+# QUESTION 4) 
+
+# New customer data
+```{r}
+new_customer <- data.frame(GENDER = "M", EDUCATION = 3, LAST_PRICE_PLAN_CHNG_DAY_CNT = 0, TOT_ACTV_SRV_CNT = 4, 
+                           AGE = 43, PCT_CHNG_IB_SMS_CNT = 1.04, PCT_CHNG_BILL_AMT = 1.19, COMPLAINT = 1)
+```
+
+# Predicted Probability
+```{r}
+test_predictions <- predict(Rfit_model, newdata = new_customer, type = "response")
+```
+
+# Prediction Interval
+```{r}
+predict_interval <- predict(Rfit_model, newdata = new_customer, interval = "prediction")
+```
+
+# Display the results
+```{r}
+test_predictions
+predict_interval
+```
+
+# Question 5)
+# Load the test data
+```{r}
+churn_test_data <- read.csv("churn_test.csv")
+
+length(test_predictions) # Number of predictions made
+nrow(churn_test_data)    # Number of rows in the test data
+```
+
+# Predict on test data
+```{r}
+test_predictions <- predict(churn_model, newdata = churn_test_data, type = "response")
+
+library(pROC)
+roc_obj <- roc(churn_test_data$CHURN, test_predictions)
+
+optimal_cutoffs <- coords(roc_obj, "best", ret="threshold")
+optimal_threshold <- optimal_cutoffs[1]
+```
+
+#Threshold 0.5
+```{r}
+predicted_churn_outcomes <- ifelse(test_predictions >= 0.5, 1, 0)
+
+confusion_matrix <- table(Predicted = predicted_churn_outcomes, Actual = churn_test_data$CHURN)
+print(confusion_matrix)
+```
+
+#Threshold 0.4
+```{r}
+predicted_churn_outcomes_1 <- ifelse(test_predictions >= 0.4, 1, 0)
+
+confusion_matrix_1 <- table(Predicted = predicted_churn_outcomes_1, Actual = churn_test_data$CHURN)
+print(confusion_matrix_1)
+```
+
+#Threshold 0.6
+```{r}
+predicted_churn_outcomes_2 <- ifelse(test_predictions >= 0.6, 1, 0)
+
+confusion_matrix_2 <- table(Predicted = predicted_churn_outcomes_2, Actual = churn_test_data$CHURN)
+print(confusion_matrix_2)
+```
+
+#Threshold 0.7
+```{r}
+predicted_churn_outcomes_3 <- ifelse(test_predictions >= 0.7, 1, 0)
+
+confusion_matrix_3 <- table(Predicted = predicted_churn_outcomes_3, Actual = churn_test_data$CHURN)
+print(confusion_matrix_3)
+```
+#We will choose threshold 0.7 as it has best accuracy 
+
+# PROBLEM 2
+# Importing data into R
+```{r}
+My_data <- read.table("energytemp.txt", header = TRUE)
+```
+
+# QUESTION 1)
+# Scatterplot
+```{r}
+plot(My_data$temp, My_data$energy, xlab="Temperature Difference (°F)", ylab="Energy Consumption", main="Scatterplot of Energy Consumption vs. Temp Difference")
+```
+
+#There is a positive linear connection between temperature and energy, which indicates that rising temperatures will result in rising energy consumption.
+
+# QUESTION 2)
+
+# Create new variables
+```{r}
+My_data$tempd2 <- My_data$temp^2
+My_data$tempd3 <- My_data$temp^3
+```
+
+# Fit a cubic model
+```{r}
+model_1 <- lm(energy ~ temp + tempd2 + tempd3, data = My_data)
+summary(model_1)
+```
+
+# QUESTION 3)
+#All three of the variables are significant, according to the model summary, as their respective P values are less than 0.05.
+
+# QUESTION 4)
+# Residuals vs Predicted
+```{r}
+pred_values <- predict(model_1)
+residuals <- rstudent(model_1)
+```
+
+# Scatter plot residuals vs predicted_values
+```{r}
+plot(pred_values, residuals, main="Studentized Residuals vs. Predicted Values",
+     xlab="Predicted Values", ylab="Studentized Residuals", col="blue", pch=16)
+abline(h=0, col="red")
+```
+
+# The figure shows that there is no discernible pattern and that the residuals are randomly distributed. However, because we have so little data, we are unable to draw any conclusions from this. There aren't any outliers at all.
+
+# Residuals vs Temp 
+```{r}
+plot(My_data$temp, residuals, main="Studentized Residuals vs. Temp",
+     xlab="Temp", ylab="Studentized Residuals", col="blue", pch=16)
+abline(h=0, col="red")
+```
+
+# Residuals vs Temp2
+```{r}
+plot(My_data$tempd2, residuals, main="Studentized Residuals vs. Temp2",
+     xlab="Temp2", ylab="Studentized Residuals", col="blue", pch=16)
+abline(h=0, col="red")
+```
+
+# Residuals vs Temp3
+```{r}
+plot(My_data$tempd3, residuals, main="Studentized Residuals vs. Temp3",
+     xlab="Temp3", ylab="Studentized Residuals", col="blue", pch=16)
+abline(h=0, col="red")
+```
+
+# Create a normal probability plot
+```{r}
+qqnorm(rstandard(model_1), main="Normal Q-Q Plot")
+qqline(rstandard(model_1), col="red")
+```
+# Because residuals follow the line, as the QQ plot illustrates, the distribution of the outliers shouldn't be skewed. We may conclude that this model is good.
+
+# QUESTION 5)
+
+# y=−17.036232+24.523999⋅temp−1.490029⋅tempd2+0.029278⋅tempd3
+
+# QUESTION 6)
+
+# Create a new dataframe with the values for prediction
+```{r}
+new_My_data <- data.frame(temp = 10, tempd2 = 10^2, tempd3 = 10^3)
+```
+
+# Predict using the fitted model
+```{r}
+predicted_energy <- predict(model_1, newdata = new_My_data)
+predicted_energy
+```
